@@ -205,11 +205,10 @@
       render();
 
       if (isSolved()) {
-  infoText.textContent = "完成！おめでとう！";
-
-  const nextBtn = document.getElementById("nextBtn");
-  if (nextBtn) {
-    nextBtn.style.display = "inline-block"; // ←ボタンを表示
+        infoText.textContent = "完成！おめでとう！";
+        const nextBtn = document.getElementById("nextBtn");
+        if (nextBtn) {
+          nextBtn.style.display = "inline-block"; // ←ボタンを表示
   }
 }
 
