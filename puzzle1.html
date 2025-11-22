@@ -144,11 +144,14 @@
     <button id="resetBtn">リセット</button>
   </div>
 
+    <!-- ★ 追加：はじめは非表示 -->
+<button id="nextBtn" style="display:none;" onclick="location.href='puzzle2.html'">
+  次へ
+</button>
+
   <div class="info" id="infoText">タイルをスワイプ感覚でタップして動かしてね。</div>
     </div>
-
-  <button id="nextBtn" style="display:none;" onclick="goNext()">次へ</button>
-
+  
   <script>
     const SIZE = 4;                   // 4×4
     const BLANK_ID = 16;              // 16番を空白扱いにする
