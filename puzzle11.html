@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>めいっ狐スライドパズル</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* --- 全体レイアウト --- */
+    body {
+      font-family: system-ui, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 16px;
+      box-sizing: border-box;
+      margin: 0;
+      text-align: center;
+      background: url('images/background.png') no-repeat center top;
+      background-size: cover;
+    }
+
+    .wrapper {
+      max-width: 320px;          /* スマホ向けの横幅 */
+      margin: 220px auto 40px;   /* 上を大きめに空けて姪っ狐の下に配置 */
+      text-align: center;
+    }
+
+    /* --- タイトル --- */
+    .game-title {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ff8fb3;
+      text-shadow: 0 0 4px #fff;
+      margin-top: -12px;
+      margin-bottom: 12px;
+    }
+
+    /* --- 盤面 + 完成図オーバーレイ --- */
+    .board-wrapper {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin: 0 auto 16px;
+    }
+
+    .board {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 2px;
+      background: #444;
+      padding: 2px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      touch-action: manipulation;
+    }
+
+    .tile {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      border-radius: 4px;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+
+    .tile.blank {
+      background-image: url("images/kuhaku.png");
+      cursor: default;
+    }
+
+    /* クリア後に上からかぶせる完成図 */
+    .clear-image {
+      position: absolute;
+      inset: -10px;          /* 盤面より一回り大きく (320→340px) */
+      display: none;
+      pointer-events: none;  /* タップを邪魔しないように */
+    }
+
+    .clear-image img {
+      width: 340px;
+      height: 340px;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.35);
+    }
+
+    /* --- ボタン周り --- */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #3a8dde;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    /* 次へボタンだけ少し余白追加 */
+    #nextBtn {
+      margin-bottom: 8px;
+      display: none;   /* JS から出すので初期は非表示 */
+    }
+
+    /* --- 下の説明テキスト --- */
+    .info {
+      margin-top: 8px;
+      font-size: 12px;
+      text-align: center;
+      color: #333;
+    }
+
+    /* 使っていない旧 preview の非表示（保険） */
+    #preview {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="game-title">めいっ狐スライドパズル 11</h1>
+
+    <!-- 盤面＋クリア画像オーバーレイ -->
+    <div class="board-wrapper">
+      <div id="board" class="board"></div>
+
+      <!-- ★ クリア時に上からかぶせる完成図 -->
+      <div id="clearImage" class="clear-image">
+        <!-- ファイル名は実際の完成図に合わせて変更してね -->
+        <img src="images/puzzle_011.png" alt="完成図" />
+      </div>
+    </div>
+
+    <!-- シャッフル / リセット -->
+    <div class="controls">
+      <button id="shuffleBtn">シャッフル</button>
+      <button id="resetBtn">リセット</button>
+    </div>
+
+    <!-- クリアしたら出てくる「次へ」ボタン -->
+    <button id="nextBtn">次へ</button>
+
+    <div class="info" id="infoText">
+      タイルをスワイプ感覚でタップして動かしてね。
+    </div>
+  </div>
+
+  <script>
+    const SIZE      = 4;   // 4×4
+    const BLANK_ID  = 16;  // 16番を空白扱いにする
+
+    const boardEl    = document.getElementById("board");
+    const infoText   = document.getElementById("infoText");
+    const nextBtn    = document.getElementById("nextBtn");
+    const clearImage = document.getElementById("clearImage");
+
+    // tiles 配列は「現在の並び」を表す（1〜16）
+    let tiles = [];
+
+    // 画像パスを返す（番号 → ファイル名）
+    function getImagePath(id) {
+      if (id === BLANK_ID) {
+        return "images/kuhaku.png";
+      }
+      // 1 → puzzle11_001.jpg, 2 → puzzle11_002.jpg … という前提
+      const num = String(id).padStart(3, "0");
+      return `images/puzzle11_${num}.jpg`;
+    }
+
+    // 盤面をHTMLに描画
+    function render() {
+      boardEl.innerHTML = "";
+      tiles.forEach((id, index) => {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+
+        if (id === BLANK_ID) {
+          tile.classList.add("blank");
+        } else {
+          tile.style.backgroundImage = `url("${getImagePath(id)}")`;
+        }
+
+        tile.dataset.index = index;
+        tile.addEventListener("click", onTileClick);
+        boardEl.appendChild(tile);
+      });
+    }
+
+    // タイルをタップしたときの処理
+    function onTileClick(e) {
+      const index      = Number(e.currentTarget.dataset.index);
+      const blankIndex = tiles.indexOf(BLANK_ID);
+
+      if (!isAdjacent(index, blankIndex)) {
+        return; // 隣り合っていないなら動かさない
+      }
+
+      // タップしたタイルと空白を入れ替え
+      [tiles[index], tiles[blankIndex]] = [tiles[blankIndex], tiles[index]];
+      render();
+
+      if (isSolved()) {
+        infoText.textContent = "完成！おめでとう🎉";
+        nextBtn.style.display    = "inline-block"; // 次へボタン表示
+        clearImage.style.display = "block";        // 完成図オーバーレイ表示
+      }
+    }
+
+    // index1 と index2 が上下左右で隣接しているかチェック
+    function isAdjacent(i1, i2) {
+      const r1 = Math.floor(i1 / SIZE);
+      const c1 = i1 % SIZE;
+      const r2 = Math.floor(i2 / SIZE);
+      const c2 = i2 % SIZE;
+      const dr = Math.abs(r1 - r2);
+      const dc = Math.abs(c1 - c2);
+      return (dr + dc === 1); // マンハッタン距離1なら隣
+    }
+
+    // 完成しているかどうか
+    function isSolved() {
+      for (let i = 0; i < SIZE * SIZE; i++) {
+        if (tiles[i] !== i + 1) return false;
+      }
+      return true;
+    }
+
+    // 1〜15 をランダムに並べて、解ける配置だけ採用
+    function shuffleTiles() {
+      const arr = [];
+      for (let i = 1; i < BLANK_ID; i++) {
+        arr.push(i);
+      }
+
+      do {
+        // フィッシャー–イェーツのシャッフル
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+      } while (!isSolvable(arr));
+
+      // 15枚分をセットして、最後に空白を置く
+      tiles = arr.concat(BLANK_ID);
+    }
+
+    // この並びが解けるパズルかどうか（4×4用）
+    function isSolvable(arr) {
+      // 4×4 で空白が一番右下にあるケースでは、
+      // 反転数が「偶数」なら解ける
+      let inv = 0;
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          if (arr[i] > arr[j]) inv++;
+        }
+      }
+      return inv % 2 === 0;
+    }
+
+    // 完成状態にリセット
+    function resetTiles() {
+      tiles = [];
+      for (let i = 1; i <= SIZE * SIZE; i++) {
+        tiles.push(i);
+      }
+    }
+
+    // 初期化
+    function init() {
+      resetTiles();  // まず完成状態
+      render();
+
+      // シャッフル
+      document.getElementById("shuffleBtn").addEventListener("click", () => {
+        shuffleTiles();
+        render();
+        infoText.textContent = "シャッフル完了！そろえてみてね。";
+        nextBtn.style.display    = "none";
+        clearImage.style.display = "none";
+      });
+
+      // リセット
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        resetTiles();
+        render();
+        infoText.textContent = "リセットしたよ。";
+        nextBtn.style.display    = "none";
+        clearImage.style.display = "none";
+      });
+
+      // 次へボタン：puzzle12.html に移動
+      nextBtn.addEventListener("click", () => {
+        location.href = "puzzle12.html";
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
