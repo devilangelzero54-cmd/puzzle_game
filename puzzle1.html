@@ -28,7 +28,24 @@
       max-width: 320px;          /* スマホ向けの横幅 */
       margin: 220px auto 40px;   /* 上を大きめに空けて姪っ狐の下に配置 */
       text-align: center;
+      position: relative;      /* ★追加：中身を相対配置にする */
     }
+
+/* クリア時に重ねる完成画像 */
+.clear-image {
+  position: absolute;
+  top: 60px;               /* ★パズルの位置に合わせて微調整してOK */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;            /* パズルより少し大きめ */
+  display: none;
+  z-index: 10;
+}
+
+.clear-image img {
+  width: 100%;
+  border-radius: 10px;
+}
 
     /* --- タイトル --- */
     .game-title {
@@ -120,6 +137,12 @@
     <!-- パズル本体 -->
     <div id="board" class="board"></div>
 
+    <!-- クリア時に上から表示する完成図（最初は非表示） -->
+  <div id="clearImage" class="clear-image">
+    <!-- ★ここの src だけパズルごとに変える -->
+    <img src="images/puzzle_001.png" alt="完成図">
+  </div>
+
     <!-- シャッフル / リセット -->
     <div class="controls">
       <button id="shuffleBtn">シャッフル</button>
@@ -193,7 +216,15 @@
       if (isSolved()) {
         infoText.textContent = "完成！おめでとう🎉";
 
-        // ★ クリアしたら「次へ」ボタン表示
+        // 完成図レイヤーを表示
+      const clearImg = document.getElementById("clearImage");
+      if (clearImg) {
+        clearImg.style.display = "block";
+      }
+
+      // 次へボタン表示
+      const nextBtn = document.getElementById("nextBtn");
+      if (nextBtn) {
         nextBtn.style.display = "inline-block";
       }
     }
@@ -261,25 +292,37 @@
 
     // 初期化
     function init() {
-      resetTiles();  // まず完成状態
+      resetTiles();
       render();
 
       document.getElementById("shuffleBtn").addEventListener("click", () => {
         shuffleTiles();
         render();
         infoText.textContent = "シャッフル完了！そろえてみてね。";
+        // 途中でシャッフルしたら完成図と次へボタンは消しておく
+        const clearImg = document.getElementById("clearImage");
+        if (clearImg) clearImg.style.display = "none";
+        const nextBtn = document.getElementById("nextBtn");
+        if (nextBtn) nextBtn.style.display = "none";
       });
 
       document.getElementById("resetBtn").addEventListener("click", () => {
         resetTiles();
         render();
         infoText.textContent = "リセットしたよ。";
+        const clearImg = document.getElementById("clearImage");
+        if (clearImg) clearImg.style.display = "none";
+        const nextBtn = document.getElementById("nextBtn");
+        if (nextBtn) nextBtn.style.display = "none";
       });
 
-      // ★ 次へボタン：puzzle2.html に移動
-      nextBtn.addEventListener("click", () => {
-        location.href = "puzzle2.html";
-      });
+      // ★ここだけパズルごとに行き先を変える
+      const nextBtn = document.getElementById("nextBtn");
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+          location.href = "puzzle2.html";  // puzzle1 → puzzle2
+        });
+      }
     }
 
     init();
