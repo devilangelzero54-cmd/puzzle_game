@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>ギャラリー | めいっ狐スライドパズル</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* 全体レイアウト */
+    body {
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #000;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .page-title {
+      font-size: 22px;
+      margin: 8px 0 16px;
+      letter-spacing: 0.1em;
+    }
+
+    /* グリッド部分（3×4） */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #111;
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .gallery-item img:active {
+      transform: scale(0.97);
+      opacity: 0.85;
+    }
+
+    /* 下部ボタン */
+    .bottom-area {
+      margin-top: 8px;
+    }
+
+    .back-btn {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #3a8dde;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .back-btn:active {
+      opacity: 0.8;
+    }
+
+    /* 拡大ビュー（モーダル風） */
+    .viewer {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    .viewer.hidden {
+      display: none;
+    }
+
+    .viewer-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .viewer-img-wrap {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+      z-index: 1000;
+    }
+
+    .viewer-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 0 16px rgba(0, 0, 0, 0.9);
+      background: #000;
+    }
+
+    .viewer-close {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: #ffffffcc;
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      line-height: 28px;
+    }
+
+    .viewer-close:active {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="page-title">ギャラリー</h1>
+
+    <!-- 3×4 ギャラリー -->
+    <div class="gallery-grid">
+      <div class="gallery-item">
+        <img src="images/puzzle_001.png" alt="1月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_002.png" alt="2月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_003.png" alt="3月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_004.png" alt="4月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_005.png" alt="5月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_006.png" alt="6月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_007.png" alt="7月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_008.png" alt="8月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_009.png" alt="9月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_010.png" alt="10月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_011.png" alt="11月" class="thumb">
+      </div>
+      <div class="gallery-item">
+        <img src="images/puzzle_012.png" alt="12月" class="thumb">
+      </div>
+    </div>
+
+    <div class="bottom-area">
+      <button class="back-btn" onclick="location.href='index.html'">
+        タイトルへ
+      </button>
+    </div>
+  </div>
+
+  <!-- 拡大表示用ビューア -->
+  <div id="viewer" class="viewer hidden">
+    <div class="viewer-bg"></div>
+    <div class="viewer-img-wrap">
+      <button class="viewer-close" aria-label="閉じる">×</button>
+      <img id="viewerImg" src="" alt="拡大表示">
+    </div>
+  </div>
+
+  <script>
+    // サムネイル → 拡大表示
+    const thumbs = document.querySelectorAll(".thumb");
+    const viewer = document.getElementById("viewer");
+    const viewerImg = document.getElementById("viewerImg");
+    const viewerBg = document.querySelector(".viewer-bg");
+    const viewerClose = document.querySelector(".viewer-close");
+
+    thumbs.forEach((img) => {
+      img.addEventListener("click", () => {
+        viewerImg.src = img.src;
+        viewerImg.alt = img.alt;
+        viewer.classList.remove("hidden");
+      });
+    });
+
+    function closeViewer() {
+      viewer.classList.add("hidden");
+      viewerImg.src = "";
+    }
+
+    viewerBg.addEventListener("click", closeViewer);
+    viewerClose.addEventListener("click", closeViewer);
+
+    // ESCキーでも閉じる
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeViewer();
+      }
+    });
+  </script>
+</body>
+</html>
